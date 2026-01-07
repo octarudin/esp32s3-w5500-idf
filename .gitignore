@@ -5,6 +5,7 @@
 
 # Directory metadata
 .directory
+.devcontainer
 
 # Temporary files
 *~
