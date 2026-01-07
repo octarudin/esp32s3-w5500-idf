@@ -20,7 +20,7 @@ Ethernet Module: W5500
   
 ## Circuits  
 <figure>  
-  <img src="docs/circuits.jpg" width="80%">  
+  <img src="docs/circuits.jpg" width="60%">  
   <figcaption>  
     Figure 1. Circuit diagram showing the connection between the microcontroller and Ethernet module    
   </figcaption>  
