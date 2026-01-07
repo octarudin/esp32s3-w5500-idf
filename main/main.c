@@ -17,7 +17,7 @@
 
 #define ETH_SPI_HOST SPI3_HOST
 
-#define PIN_CS    16
+#define PIN_CS    4
 #define PIN_MOSI  5
 #define PIN_SCLK  6
 #define PIN_MISO  7
