@@ -6,22 +6,37 @@
 #include "esp_netif.h"
 #include "driver/gpio.h"
 
-
 #include "esp_eth.h"
 #include "esp_eth_driver.h"
 #include "esp_eth_mac_w5500.h"
 #include "esp_eth_phy_w5500.h"
 
+#define ESP32_MICROCONTROLLER
+// #define ESP32S3_MICROCONTROLLER
 
+#if defined(ESP32_MICROCONTROLLER)
+#define ETH_SPI_HOST SPI2_HOST
+#define PIN_CS    5
+#define PIN_MOSI  23
+#define PIN_SCLK  18
+#define PIN_MISO  19
+#define PIN_RST   22
+#define PIN_INT   21    //!<< mode polling jika PIN_INT = -1, anda harus mengatur poll_period_ms
+                        //!<< mode interrupt jika PIN_INT diisi dengan nomor GPIO valid, anda harus menginstal gpio isr service
+
+#elif defined(ESP32S3_MICROCONTROLLER)
 #define ETH_SPI_HOST SPI3_HOST
-
 #define PIN_CS    4
 #define PIN_MOSI  5
 #define PIN_SCLK  6
 #define PIN_MISO  7
 #define PIN_RST   14
-#define PIN_INT   -1
+#define PIN_INT   21    //!<< mode polling jika PIN_INT = -1, anda harus mengatur poll_period_ms
+                        //!<< mode interrupt jika PIN_INT diisi dengan nomor GPIO valid, anda harus menginstal gpio isr service
 
+#else
+#error "Target MCU not defined"
+#endif
 
 const char *ETH_TAG = "eth";
 uint8_t eth_mac[6] = { 0x02, 0x00, 0x00, 0x12, 0x34, 0x56 };
@@ -50,8 +65,12 @@ static void spi_bus_init_w5500(void)
 bool eth_w5500_init(void)
 {
     eth_w5500_config_t w5500_cfg = ETH_W5500_DEFAULT_CONFIG(ETH_SPI_HOST, &devcfg);
-    w5500_cfg.int_gpio_num = PIN_INT;
-    w5500_cfg.poll_period_ms = 100;
+    w5500_cfg.int_gpio_num = PIN_INT;   //!<< Gunakan int_gpio_num = -1 jika tidak menggunakan interrupt
+    if (w5500_cfg.int_gpio_num != -1) {
+        ESP_LOGI(ETH_TAG, "W5500 INT GPIO = %d", w5500_cfg.int_gpio_num); //!<< jika interrupt digunakan
+    } else {
+        w5500_cfg.poll_period_ms = 50;  //!<< jika interrupt tidak digunakan
+    }
 
     eth_mac_config_t mac_cfg = ETH_MAC_DEFAULT_CONFIG();
     esp_eth_mac_t *mac = esp_eth_mac_new_w5500(&w5500_cfg, &mac_cfg);
@@ -113,11 +132,12 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_handler_register(
         ETH_EVENT, ESP_EVENT_ANY_ID, &eth_event_handler, NULL));
-
     ESP_ERROR_CHECK(esp_event_handler_register(
         IP_EVENT, IP_EVENT_ETH_GOT_IP, &got_ip_event_handler, NULL));
+    if(PIN_INT != -1) {
+        ESP_ERROR_CHECK(gpio_install_isr_service(0)); //!<< diperlukan jika w5500 menggunakan interrupt
+    }
 
     spi_bus_init_w5500();
     eth_w5500_init();
-
 }
